@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chatroom</title>
+    <style>
+        /* Background */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a74da, #88e063);
+            background-attachment: fixed;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        /* Glassy Container */
+        #messages {
+            background: rgba(255, 255, 255, 0.15); /* Transparent white */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px); /* Glass effect */
+            border-radius: 10px;
+            width: 80%;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 15px;
+            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.2); /* Semi-transparent message bubble */
+            color: #333;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .message strong {
+            color: #0a74da; /* Vista blue */
+        }
+
+        /* Header */
+        h1 {
+            color: #ffffff;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.4);
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        /* Input Fields */
+        input {
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            width: 200px;
+            margin: 0 5px;
+            background: rgba(255, 255, 255, 0.7);
+            color: #333;
+            box-shadow: inset 0px 2px 5px rgba(0, 0, 0, 0.2);
+            outline: none;
+        }
+
+        /* Buttons */
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: linear-gradient(to right, #4facfe, #00f2fe); /* Vista button gradient */
+            color: white;
+            cursor: pointer;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease-in-out;
+            outline: none;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Forms */
+        form {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        /* Scrollbar Styling */
+        #messages::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #messages::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+        }
+
+        #messages::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Chatroom</h1>
+    <div id="messages"></div>
+
+    <!-- Username Form -->
+    <form id="usernameForm">
+        <input type="text" id="username" placeholder="Enter your name" required>
+        <button type="submit">Save Name</button>
+    </form>
+
+    <!-- Chat Form -->
+    <form id="chatForm" style="display: none;">
+        <input type="text" id="message" placeholder="Your message" required>
+        <button type="submit">Send</button>
+        <button type="button" id="changeNameBtn">Change Name</button>
+    </form>
+
+    <script>
+        const messagesDiv = document.getElementById('messages');
+        const usernameForm = document.getElementById('usernameForm');
+        const chatForm = document.getElementById('chatForm');
+        const usernameInput = document.getElementById('username');
+        const changeNameBtn = document.getElementById('changeNameBtn');
+
+        // Check if a username is already saved
+        const savedUsername = localStorage.getItem('username');
+        if (savedUsername) {
+            usernameInput.value = savedUsername;
+            usernameForm.style.display = 'none'; // Hide username form
+            chatForm.style.display = 'flex'; // Show chat form
+        }
+
+        // Save username and switch forms
+        usernameForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            if (username) {
+                localStorage.setItem('username', username);
+                usernameForm.style.display = 'none';
+                chatForm.style.display = 'flex';
+            }
+        });
+
+        // Fetch messages from the server
+        async function fetchMessages() {
+            const res = await fetch('chatroom.php');
+            const messages = await res.json();
+            messagesDiv.innerHTML = '';
+            messages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'message';
+                div.innerHTML = `<strong>${msg.username}</strong>: ${msg.message}`;
+                messagesDiv.appendChild(div);
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
+        }
+
+        // Send a new message
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const messageInput = document.getElementById('message');
+            const username = localStorage.getItem('username');
+            const message = messageInput.value.trim();
+
+            if (message) {
+                await fetch('chatroom.php', {
+                    method: 'POST',
+                    body: new URLSearchParams({ username, message }),
+                });
+                messageInput.value = ''; // Clear the input
+                fetchMessages();
+            }
+        });
+
+        // Change name button functionality
+        changeNameBtn.addEventListener('click', () => {
+            localStorage.removeItem('username'); // Remove the saved username
+            usernameInput.value = ''; // Clear the username input
+            usernameForm.style.display = 'flex'; // Show username form
+            chatForm.style.display = 'none'; // Hide chat form
+        });
+
+        // Refresh messages every 2 seconds
+        setInterval(fetchMessages, 2000);
+        fetchMessages();
+    </script>
+</body>
+</html>
